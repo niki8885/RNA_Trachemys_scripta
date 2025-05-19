@@ -11,6 +11,9 @@ library(tidyr)
 library(stringr)
 library(goseq)
 library(biomaRt)
+library(pathview)
+library(ggrepel)
+library(enrichplot)
 
 
 
@@ -98,16 +101,6 @@ ggplot(pca_df, aes(x = PC1, y = PC2, color = Group, label = Sample)) +
 plotMDS(dge, col = as.numeric(group), main = "MDS plot")
 legend("topright", legend = levels(group), col = 1:2, pch = 20)
 
-top_genes <- head(order(res$adj.P.Val), 50)
-
-pheatmap(v$E[top_genes, ],
-         cluster_rows = TRUE,
-         cluster_cols = TRUE,
-         scale = "row",
-         show_rownames = FALSE,
-         annotation_col = annotation_col,
-         main = "Top 50 DEG Heatmap")
-
 colnames(df_genes)
 head(df_genes$Dbxref, 10)
 
@@ -136,7 +129,15 @@ kk <- enrichKEGG(gene         = gene_list,
 
 head(kk)
 
-dotplot(kk, showCategory = 15, font.size = 10, title = "KEGG Pathway Enrichment")
+dotplot(kk, showCategory = 10, font.size = 10, title = "KEGG Pathway Enrichment")
 
 kegg_df <- as.data.frame(kk)
 write.csv(kegg_df, "KEGG_enrichment_results.csv", row.names = FALSE)
+
+head(kegg_df$ID)
+
+cnetplot(kk,
+         showCategory = 10,
+         categorySize = "pvalue",
+         node_label = "category",
+         colorEdge = TRUE)
