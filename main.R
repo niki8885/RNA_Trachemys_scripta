@@ -12,8 +12,7 @@ library(stringr)
 library(goseq)
 library(biomaRt)
 
-BiocManager::install("genbankr")
-library(genbankr)
+
 
 files <- c("data/counts_SRR8695401.txt",
            "data/counts_SRR8695402.txt",
@@ -58,3 +57,56 @@ sig_gene_ids <- rownames(sig_genes)
 
 write.csv(sig_genes, file = "significant_genes.csv")
 
+gff <- import.gff("data/GCF_013100865.1_CAS_Tse_1.0_genomic.gff")
+genes <- gff[gff$type == "gene"]
+df_genes <- as.data.frame(genes)
+head(df_genes[, c("seqnames", "start", "end", "strand", "ID", "Name", "gene", "Note")])
+
+
+res$gene_id <- rownames(res)
+df_genes$gene <- as.character(df_genes$gene)
+res$gene_id <- as.character(res$gene_id)
+res_annotated <- left_join(res, df_genes, by = c("gene_id" = "gene"))
+res_annotated_clean <- res_annotated %>%
+  mutate(across(where(is.list), ~ sapply(., function(x) paste(unlist(x), collapse = "; "))))
+write.csv(res_annotated_clean, file = "DEG_with_annotations.csv", row.names = FALSE)
+head(res_annotated[, c("gene_id", "logFC", "adj.P.Val", "Name", "Note", "seqnames", "start", "end")])
+
+res$threshold <- as.factor(abs(res$logFC) > 1 & res$adj.P.Val < 0.05)
+
+ggplot(res, aes(x = logFC, y = -log10(adj.P.Val), color = threshold)) +
+  geom_point(alpha = 0.6) +
+  scale_color_manual(values = c("grey", "red")) +
+  geom_vline(xintercept = c(-1, 1), linetype = "dashed") +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed") +
+  theme_minimal() +
+  labs(title = "Volcano Plot", x = "log2 Fold Change", y = "-log10 Adjusted P-Value")
+
+pca <- prcomp(t(v$E), scale. = TRUE)
+
+pca_df <- data.frame(Sample = rownames(pca$x),
+                     PC1 = pca$x[, 1],
+                     PC2 = pca$x[, 2],
+                     Group = group)
+
+ggplot(pca_df, aes(x = PC1, y = PC2, color = Group, label = Sample)) +
+  geom_point(size = 4) +
+  geom_text_repel(show.legend = FALSE) +
+  labs(title = "PCA of Samples", x = "PC1", y = "PC2") +
+  theme_minimal()
+
+plotMDS(dge, col = as.numeric(group), main = "MDS plot")
+legend("topright", legend = levels(group), col = 1:2, pch = 20)
+
+top_genes <- head(order(res$adj.P.Val), 50)
+
+pheatmap(v$E[top_genes, ],
+         cluster_rows = TRUE,
+         cluster_cols = TRUE,
+         scale = "row",
+         show_rownames = FALSE,
+         annotation_col = annotation_col,
+         main = "Top 50 DEG Heatmap")
+
+colnames(df_genes)
+head(df_genes$Dbxref, 10)
