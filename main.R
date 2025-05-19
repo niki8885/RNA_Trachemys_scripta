@@ -110,3 +110,33 @@ pheatmap(v$E[top_genes, ],
 
 colnames(df_genes)
 head(df_genes$Dbxref, 10)
+
+df_genes$EntrezID <- sapply(df_genes$Dbxref, function(x) {
+  if (length(x) > 0 && grepl("GeneID:", x)) {
+    sub(".*GeneID:([0-9]+).*", "\\1", x)
+  } else {
+    NA
+  }
+})
+
+head(df_genes[, c("gene", "Dbxref", "EntrezID")], 10)
+table(is.na(df_genes$EntrezID))
+
+res$gene_id <- as.character(res$gene_id)
+df_genes$gene <- as.character(df_genes$gene)
+
+res_annotated <- left_join(res, df_genes[, c("gene", "EntrezID")],
+                           by = c("gene_id" = "gene"))
+
+gene_list <- na.omit(unique(res_annotated$EntrezID))
+
+kk <- enrichKEGG(gene         = gene_list,
+                 organism     = "tst",
+                 pvalueCutoff = 0.05)
+
+head(kk)
+
+dotplot(kk, showCategory = 15, font.size = 10, title = "KEGG Pathway Enrichment")
+
+kegg_df <- as.data.frame(kk)
+write.csv(kegg_df, "KEGG_enrichment_results.csv", row.names = FALSE)
