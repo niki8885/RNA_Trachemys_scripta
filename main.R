@@ -141,3 +141,10 @@ cnetplot(kk,
          categorySize = "pvalue",
          node_label = "category",
          colorEdge = TRUE)
+
+pathway_id <- kegg_df$ID[2]
+pathview(gene.data  = as.numeric(res_annotated$log2FoldChange),
+         gene.idtype = "entrez",
+         pathway.id = pathway_id,
+         species    = "tst",
+         out.suffix = "pathview")
